@@ -45,11 +45,12 @@ while True:
         print records[0]
     except:
         break
-    sleep(1)
     for remote in records:
+        print remote[0]
         try:
             user = reader.city(remote[1])
         except:
+            cur.execute('''UPDATE Logs set processed = 1 where id=?''',(remote[0],))                   
             continue
         cur.execute('''SELECT frequency from location where ip = ?''',(remote[1],))
         frequency_info=cur.fetchone()        
@@ -60,6 +61,7 @@ while True:
             frequency = frequency+1
             cur.execute('''UPDATE Location set frequency = ? where ip = ?''',(frequency,remote[1],))
         data=(user.country.name,user.city.name,user.location.latitude,user.location.longitude,remote[1],)
+        print data
         cur.execute('''UPDATE Location set country=?,city=?,latitude=?,longitude=? where ip=?''',data)
         cur.execute('''UPDATE Logs set processed = 1 where id=?''',(remote[0],))                   
     conn.commit()

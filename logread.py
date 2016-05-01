@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+import urllib2
+from BeautifulSoup  import *
+from urlparse import urlparse
+from urlparse import urljoin
 import argparse
 import os
 import sqlite3
@@ -22,8 +26,24 @@ def read(data):
         if logsrecord == None:        
             cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent,referer,ua,processed) VALUES(?,?,?,?,?,?,?,?,?,?,?,0)''',values )
     logfile.close()
-    
-    
+
+def downloadlogs(url):
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    index=urllib2.urlopen(url)
+    filelist=index.read()
+    soup=BeautifulSoup(filelist)
+    tags = soup('a')
+    for tag in tags:
+        href = tag.get('href', None)
+        if href.endswith('log') :
+            loguri=urljoin(url,href)
+            retrievelog=urllib2.urlopen(loguri)
+            logfile=string.join(["data",href],"/")
+            f=open(logfile,"w")
+            f.write(retrievelog)
+            cur.execute('''INSERT OR IGNORE INTO Logfiles (fileuri,status) VALUES (?,)''',(href,)) 
+                                        
 conn = sqlite3.connect('accesslogs.sqlite')
 cur = conn.cursor()
 #create table for all data from files to SQL
@@ -38,8 +58,8 @@ source.add_argument('--resetLogs',help='Set All Logs to be unprocessed',choices=
 args = parser.parse_args()   
 
 if args.data == None:
-    args.data = args.url
-
+    args.data = args.URL
+    
 if args.resetLogs == "1":
     cur.execute('''UPDATE Logs set processed=0''')
     conn.commit()
@@ -52,7 +72,8 @@ elif os.path.isdir(args.data):
     listing=os.listdir(args.data)
     for logfile in listing:
         cur.execute('''SELECT status from LogFiles where fileuri=? ''',(logfile,))
-        if  cur.fetchone() != 1 :
+        done=cur.fetchone()
+        if  done == None or ( done != None and done[0] != 1):
             cur.execute('''INSERT OR IGNORE INTO LogFiles (fileuri,status) VALUES (?,?) ''',(logfile,0,))
             log = string.join([args.data,logfile],"/")
             read(log)
