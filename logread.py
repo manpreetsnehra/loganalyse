@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import urllib2
-from BeautifulSoup  import *
+import urllib
+from BeautifulSoup import *
 from urlparse import urlparse
 from urlparse import urljoin
 import argparse
@@ -30,7 +30,7 @@ def read(data):
 def downloadlogs(url):
     if not os.path.exists("data"):
         os.makedirs("data")
-    index=urllib2.urlopen(url)
+    index=urllib.urlopen(url)
     filelist=index.read()
     soup=BeautifulSoup(filelist)
     tags = soup('a')
@@ -38,10 +38,8 @@ def downloadlogs(url):
         href = tag.get('href', None)
         if href.endswith('log') :
             loguri=urljoin(url,href)
-            retrievelog=urllib2.urlopen(loguri)
-            logfile=string.join(["data",href],"/")
-            f=open(logfile,"w")
-            f.write(retrievelog)
+            logfile=string.join(["data",href],"/")            
+            urllib.urlretrieve(loguri,logfile)
             cur.execute('''INSERT OR IGNORE INTO Logfiles (fileuri,status) VALUES (?,)''',(href,)) 
                                         
 conn = sqlite3.connect('accesslogs.sqlite')
@@ -57,8 +55,8 @@ source.add_argument('--url', help='URL Location',type=str)
 source.add_argument('--resetLogs',help='Set All Logs to be unprocessed',choices=['0','1'])
 args = parser.parse_args()   
 
-if args.data == None:
-    args.data = args.URL
+
+downloadlogs(args.url)
     
 if args.resetLogs == "1":
     cur.execute('''UPDATE Logs set processed=0''')
