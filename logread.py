@@ -56,7 +56,9 @@ source.add_argument('--resetLogs',help='Set All Logs to be unprocessed',choices=
 args = parser.parse_args()   
 
 
-downloadlogs(args.url)
+if args.url != None:
+    downloadlogs(args.url)
+    args.data="data"
     
 if args.resetLogs == "1":
     cur.execute('''UPDATE Logs set processed=0''')
