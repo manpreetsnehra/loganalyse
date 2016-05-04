@@ -4,6 +4,11 @@ from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import sqlite3
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description="Number of Records to IP locations on World Map")
+parser.add_argument('--ipcount', help='Number of Ips to plot on the map',type=str)
+args = parser.parse_args()   
 
 #Draw the base map with NASA bluemarble
 m = Basemap(projection='cyl',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='l')
@@ -19,7 +24,11 @@ except:
 
 cur=conn.cursor()
 i=0
-cur.execute('''SELECT longitude,latitude,frequency from Location''')
+if args.ipcount == None:
+    cur.execute('''SELECT longitude,latitude,frequency from Location''')
+else:    
+    cur.execute('''SELECT longitude,latitude,frequency from Location LIMIT ?''',(args.ipcount,))
+    
 locations=cur.fetchall()
 for point in locations:
     if point[0] != None: 

@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 import urllib
-from BeautifulSoup import *
-from urlparse import urlparse
+from BeautifulSoup import BeautifulSoup
 from urlparse import urljoin
 import argparse
 import os
@@ -13,18 +12,21 @@ import sys
 
 def read(data):
     logfile = open(data)
+    month_dict = {"Jan":"01","Feb":"02","Mar":"03","Apr":"04", "May":"05", "Jun":"06","Jul":"07","Aug":"08","Sep":"09","Oct":"10","Nov":"11","Dec":"12"} 
     for line in logfile:
         try:
             record = re.search('([\d+\.]+) - - \[(.*?)\] "(.*?)" (\d+) (.*?) "(.*?)" "(.*?)"',line).groups()
             (datetime,zone) = string.split(record[1])
             (command,request,responseproto) = string.split(record[2])
             (date,time)=string.split(datetime,":",1)
+            (day,month,year)=string.split(date,"/")
+            newdate=int(string.join([year,month_dict[month],day],""))
         except:
             continue
-        values=(record[0],date,time,int(zone),command,request,responseproto,int(record[3]),record[4],record[5],record[6],)
+        values=(record[0],newdate,time,int(zone),command,request,responseproto,int(record[3]),record[4],record[5],record[6],)
         logsrecord=re.match("^/logs/(.*)",request)
         if logsrecord == None:        
-            cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent,referer,ua,processed) VALUES(?,?,?,?,?,?,?,?,?,?,?,0)''',values )
+            cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent,referer,ua) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',values )
     logfile.close()
 
 def downloadlogs(url):
@@ -45,7 +47,8 @@ def downloadlogs(url):
 conn = sqlite3.connect('accesslogs.sqlite')
 cur = conn.cursor()
 #create table for all data from files to SQL
-cur.execute('''CREATE TABLE IF NOT EXISTS Logs (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_user TEXT , date TEXT,time TEXT, timezone INTEGER, command TEXT, request TEXT, responseproto TEXT,status INTEGER, bytes_sent TEXT, referer TEXT,ua TEXT,processed INTEGER)''')
+cur.execute('''CREATE TABLE IF NOT EXISTS Logs (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_user TEXT , date INT,time TEXT, timezone INTEGER, command TEXT, request TEXT, responseproto TEXT,status INTEGER, bytes_sent TEXT, referer TEXT,ua TEXT)''')
+cur.execute('''CREATE TABLE IF NOT EXISTS LogsProcessed (id INTEGER PRIMARY KEY UNIQUE, location INTEGER DEFAULT 0, status INTEGER DEFAULT 0, datasent INTEGER DEFAULT 0, useragent INTEGER DEFAULT 0)''')
 cur.execute('''CREATE TABLE IF NOT EXISTS LogFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, fileuri TEXT, status INTEGER)''')
                 
 parser = argparse.ArgumentParser(description="Read Apache Logs and push into sqlite")
@@ -61,13 +64,20 @@ if args.url != None:
     args.data="data"
     
 if args.resetLogs == "1":
-    cur.execute('''UPDATE Logs set processed=0''')
+    cur.execute('''UPDATE LogsProcessed set location=0''')
     conn.commit()
     sys.exit(1)    
     
 #check if the data entered is a file or dir
 if os.path.isfile(args.data):
-    read(args.data)
+    logfile=string.split(args.data,"/")[-1]
+    cur.execute('''SELECT status from LogFiles where fileuri=? ''',(logfile,))
+    done=cur.fetchone()
+    if  done == None or ( done != None and done[0] != 1):
+        cur.execute('''INSERT OR IGNORE INTO LogFiles (fileuri,status) VALUES (?,?) ''',(logfile,0,))
+        read(args.data  )
+        cur.execute('''UPDATE LogFiles set status = 1 where fileuri=? ''',(logfile,))
+        conn.commit()
 elif os.path.isdir(args.data):
     listing=os.listdir(args.data)
     for logfile in listing:
@@ -79,4 +89,8 @@ elif os.path.isdir(args.data):
             read(log)
             cur.execute('''UPDATE LogFiles set status = 1 where fileuri=? ''',(logfile,))
         conn.commit()
+
+cur.execute('''INSERT OR IGNORE INTO LogsProcessed (id) SELECT id from Logs''')
+conn.commit()
+        
 cur.close()           

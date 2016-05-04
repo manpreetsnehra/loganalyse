@@ -4,7 +4,6 @@ import geoip2.webservice
 import argparse
 import sqlite3
 import sys
-from time import sleep
 
 parser = argparse.ArgumentParser(description="Use GeoIP database to pinpoint location of users on a map")
 source = parser.add_mutually_exclusive_group(required=True)
@@ -39,18 +38,17 @@ elif args.datasource == 'web':
         sys.exit(1)
     
 while True:
-    cur.execute('''SELECT id,remote_user from Logs where processed = 0 LIMIT 1000''')
+    cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where logsprocessed.location = 0 LIMIT 1000''')
     try:
         records=cur.fetchall()
         print records[0]
     except:
         break
     for remote in records:
-        print remote[0]
         try:
             user = reader.city(remote[1])
         except:
-            cur.execute('''UPDATE Logs set processed = 1 where id=?''',(remote[0],))                   
+            cur.execute('''UPDATE LogsProcessed set location = 1 where id=?''',(remote[0],))                   
             continue
         cur.execute('''SELECT frequency from location where ip = ?''',(remote[1],))
         frequency_info=cur.fetchone()        
@@ -61,7 +59,6 @@ while True:
             frequency = frequency+1
             cur.execute('''UPDATE Location set frequency = ? where ip = ?''',(frequency,remote[1],))
         data=(user.country.name,user.city.name,user.location.latitude,user.location.longitude,remote[1],)
-        print data
         cur.execute('''UPDATE Location set country=?,city=?,latitude=?,longitude=? where ip=?''',data)
-        cur.execute('''UPDATE Logs set processed = 1 where id=?''',(remote[0],))                   
+        cur.execute('''UPDATE LogsProcessed set location = 1 where id=?''',(remote[0],))                   
     conn.commit()
