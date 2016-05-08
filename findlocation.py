@@ -38,7 +38,7 @@ elif args.datasource == 'web':
         sys.exit(1)
     
 while True:
-    cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where logsprocessed.location = 0 LIMIT 1000''')
+    cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where logsprocessed.location = 0 LIMIT 10000''')
     try:
         records=cur.fetchall()
         print records[0]
