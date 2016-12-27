@@ -8,7 +8,7 @@ import sys
 parser = argparse.ArgumentParser(description="Use GeoIP database to pinpoint location of users on a map")
 source = parser.add_mutually_exclusive_group(required=True)
 source.add_argument('--datasource', help='Use local Datalocation',choices=['web','local'])
-source.add_argument('--droptable',help="remove existing ipto geo table",choices=['1','0'])
+source.add_argument('--droptable',help="remove existing ip to geo table",choices=['1','0'])
 args = parser.parse_args()
 
 try: 

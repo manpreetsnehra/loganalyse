@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 import urllib
 from BeautifulSoup import BeautifulSoup
 from urlparse import urljoin
@@ -9,24 +8,33 @@ import sqlite3
 import re
 import string
 import sys
+import socket
 
 def read(data):
     logfile = open(data)
     month_dict = {"Jan":"01","Feb":"02","Mar":"03","Apr":"04", "May":"05", "Jun":"06","Jul":"07","Aug":"08","Sep":"09","Oct":"10","Nov":"11","Dec":"12"} 
     for line in logfile:
         try:
-            record = re.search('([\d+\.]+) - - \[(.*?)\] "(.*?)" (\d+) (.*?) "(.*?)" "(.*?)"',line).groups()
+            record = re.search('(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+)',line).groups() or re.search('([\d+\.]+) - - \[(.*?)\] "(.*?)" (\d+) (.*?) "(.*?)" "(.*?)"',line).groups()
             (datetime,zone) = string.split(record[1])
             (command,request,responseproto) = string.split(record[2])
             (date,time)=string.split(datetime,":",1)
             (day,month,year)=string.split(date,"/")
             newdate=int(string.join([year,month_dict[month],day],""))
+            remote_ip=socket.gethostbyname(record[0])
         except:
             continue
-        values=(record[0],newdate,time,int(zone),command,request,responseproto,int(record[3]),record[4],record[5],record[6],)
         logsrecord=re.match("^/logs/(.*)",request)
-        if logsrecord == None:        
-            cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent,referer,ua) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',values )
+        if len(record) > 5:            
+            values=(remote_ip,newdate,time,int(zone),command,request,responseproto,int(record[3]),record[4],record[5],record[6],)
+            if logsrecord == None:        
+                cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent,referer,ua) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',values ) 
+        else:
+            values=(remote_ip,newdate,time,int(zone),command,request,responseproto,int(record[3]),record[4],)
+            print values
+            if logsrecord == None:        
+                cur.execute('''INSERT OR IGNORE INTO Logs (remote_user,date,time,timezone,command,request,responseproto,status,bytes_sent) VALUES(?,?,?,?,?,?,?,?,?)''',values )
+        conn.commit()                	
     logfile.close()
 
 def downloadlogs(url):
