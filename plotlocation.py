@@ -27,7 +27,7 @@ i=0
 if args.ipcount == None:
     cur.execute('''SELECT longitude,latitude,frequency from Location''')
 else:    
-    cur.execute('''SELECT longitude,latitude,frequency from Location LIMIT ?''',(args.ipcount,))
+    cur.execute('''SELECT longitude,latitude,frequency from Location ORDER bY frequency Desc LIMIT ?''',(args.ipcount,))
     
 locations=cur.fetchall()
 for point in locations:

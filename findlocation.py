@@ -4,7 +4,16 @@ import geoip2.webservice
 import argparse
 import sqlite3
 import sys
+import re
+import socket
 
+def resolve(hostname):
+	try: 
+		ip = socket.gethostbyname(hostname)
+	except:
+		ip = "unresolvable"
+	return ip		
+	
 parser = argparse.ArgumentParser(description="Use GeoIP database to pinpoint location of users on a map")
 source = parser.add_mutually_exclusive_group(required=True)
 source.add_argument('--datasource', help='Use local Datalocation',choices=['web','local'])
@@ -19,9 +28,12 @@ except:
     
 cur=conn.cursor()
 cur.execute('''CREATE TABLE IF NOT EXISTS Location ( ip TEXT PRIMARY KEY UNIQUE,country TEXT,city TEXT, latitude FLOAT,longitude FLOAT,frequency INTEGER)''')
+cur.execute('''CREATE TABLE IF NOT EXISTS Unresolvable (hostname TEXT PRIMARY KEY UNIQUE)''')
 
 if args.droptable == '1':
     cur.execute('''DROP TABLE IF EXISTS Location''')
+    cur.execute('''UPDATE Logsprocessed set location=0''')
+    conn.commit()
     sys.exit(1)
 #reference Docs http://geoip2.readthedocs.org/en/latest/ if you are not using a downloaded version of the db then the corresponding webservice can be used
 if args.datasource == 'local':
@@ -38,27 +50,34 @@ elif args.datasource == 'web':
         sys.exit(1)
     
 while True:
-    cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where logsprocessed.location = 0 LIMIT 10000''')
+    cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where Logsprocessed.location = 0 LIMIT 10000''')
     try:
         records=cur.fetchall()
-        print records[0]
     except:
         break
     for remote in records:
+    	if re.search(r"[a-zA-Z]+",remote[1]) is not None:	
+    		ip = resolve(remote[1])
+    	else:
+    		ip = remote[1]
+    	print remote[0],remote[1],ip
         try:
             user = reader.city(remote[1])
         except:
             cur.execute('''UPDATE LogsProcessed set location = 1 where id=?''',(remote[0],))                   
             continue
+    	if ip == 'unresolvable':
+    		cur.execute('''INSERT OR IGNORE INTO Unresolvable hostname values ?''',(ip,))
+    		continue        
         cur.execute('''SELECT frequency from location where ip = ?''',(remote[1],))
         frequency_info=cur.fetchone()        
         if frequency_info == None:
-            cur.execute('''INSERT OR IGNORE INTO Location (ip,frequency) VALUES (?,?)''',(remote[1],1,))
+            cur.execute('''INSERT OR IGNORE INTO Location (ip,frequency) VALUES (?,?)''',(ip,1,))
         else:
             frequency = frequency_info[0]
             frequency = frequency+1
-            cur.execute('''UPDATE Location set frequency = ? where ip = ?''',(frequency,remote[1],))
-        data=(user.country.name,user.city.name,user.location.latitude,user.location.longitude,remote[1],)
+            cur.execute('''UPDATE Location set frequency = ? where ip = ?''',(frequency,ip,))
+        data=(user.country.name,user.city.name,user.location.latitude,user.location.longitude,ip,)
         cur.execute('''UPDATE Location set country=?,city=?,latitude=?,longitude=? where ip=?''',data)
         cur.execute('''UPDATE LogsProcessed set location = 1 where id=?''',(remote[0],))                   
     conn.commit()
