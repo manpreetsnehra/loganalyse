@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+#plot the locations for findlocation on a world map
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import sqlite3
@@ -34,6 +34,7 @@ for point in locations:
     if point[0] != None: 
 #    try:
         x,y = m(point[0],point[1])
+#Use 2 colors based on frequency of connection        
         if point[2] < 10:
             m.plot(x,y,'wh')
         else:

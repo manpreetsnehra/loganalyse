@@ -1,11 +1,10 @@
 #!/usr/bin/python
-
+#process the status codes in the logs table based on date. How many of which status codes per day
 import sqlite3
 import string
 import sys
 
 status_dict={200:"Code200",206:"Code206",301:"Code301",304:"Code304",400:"Code400",403:"Code403",404:"Code404",405:"Code405",413: "Code413",500:"Code500",501:"Code501"}
-
 
 try: 
     conn = sqlite3.connect('accesslogs.sqlite')
@@ -42,6 +41,7 @@ while True:
         cur.execute('''UPDATE LogsProcessed set status=1 where id = ?''',(status[0],))
     conn.commit()            
 
+#how much data was sent by the server sum up all the data sent per day
 while True:
     cur.execute('''SELECT Logs.id,Logs.date,Logs.bytes_sent from Logs JOIN LogsProcessed ON Logs.id=LogsProcessed.id where Logsprocessed.datasent=0 LIMIT 10000''')
     try:
