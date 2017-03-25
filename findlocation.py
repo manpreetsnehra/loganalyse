@@ -60,6 +60,8 @@ while True:
     cur.execute('''SELECT Logs.id,Logs.remote_user from Logs JOIN LogsProcessed ON Logs.id = LogsProcessed.id where Logsprocessed.location = 0 LIMIT 10000''')
     try:
         records=cur.fetchall()
+        if records == []:
+        	break
     except:
         break
     for remote in records:

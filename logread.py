@@ -73,7 +73,7 @@ conn = sqlite3.connect('accesslogs.sqlite')
 cur = conn.cursor()
 #create tables for all data from files to SQL
 cur.execute('''CREATE TABLE IF NOT EXISTS Logs (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_user TEXT , date INT,time TEXT, timezone INTEGER, command TEXT, request TEXT, responseproto TEXT,status INTEGER, bytes_sent TEXT, referer TEXT,ua TEXT)''')
-cur.execute('''CREATE TABLE IF NOT EXISTS LogsProcessed (id INTEGER PRIMARY KEY UNIQUE, location INTEGER DEFAULT 0, status INTEGER DEFAULT 0, datasent INTEGER DEFAULT 0, useragent INTEGER DEFAULT 0)''')
+cur.execute('''CREATE TABLE IF NOT EXISTS LogsProcessed (id INTEGER PRIMARY KEY UNIQUE, location INTEGER DEFAULT 0, status INTEGER DEFAULT 0, useragent INTEGER DEFAULT 0)''')
 cur.execute('''CREATE TABLE IF NOT EXISTS LogFiles (id INTEGER PRIMARY KEY AUTOINCREMENT, fileuri TEXT, status INTEGER)''')
                 
 #parse command line arguments                
