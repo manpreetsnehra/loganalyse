@@ -4,5 +4,4 @@ data/*
 data
 *.sqlite
 accesslogs.sqlite-journal
-status.png
-
+*.png
